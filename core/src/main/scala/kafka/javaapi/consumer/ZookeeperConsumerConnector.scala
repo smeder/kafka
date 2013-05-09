@@ -84,21 +84,28 @@ private[kafka] class ZookeeperConsumerConnector(val config: ConsumerConfig,
     }
     ret
   }
-  
+
   def createMessageStreams(topicCountMap: java.util.Map[String,java.lang.Integer]): java.util.Map[String,java.util.List[KafkaStream[Array[Byte],Array[Byte]]]] =
     createMessageStreams(topicCountMap, new DefaultDecoder(), new DefaultDecoder())
-    
+
   def createMessageStreamsByFilter[K,V](topicFilter: TopicFilter, numStreams: Int, keyDecoder: Decoder[K], valueDecoder: Decoder[V]) =
     asList(underlying.createMessageStreamsByFilter(topicFilter, numStreams, keyDecoder, valueDecoder))
 
-  def createMessageStreamsByFilter(topicFilter: TopicFilter, numStreams: Int) = 
+  def createMessageStreamsByFilter(topicFilter: TopicFilter, numStreams: Int) =
     createMessageStreamsByFilter(topicFilter, numStreams, new DefaultDecoder(), new DefaultDecoder())
-    
-  def createMessageStreamsByFilter(topicFilter: TopicFilter) = 
+
+  def createMessageStreamsByFilter(topicFilter: TopicFilter) =
     createMessageStreamsByFilter(topicFilter, 1, new DefaultDecoder(), new DefaultDecoder())
-    
+
   def commitOffsets() {
     underlying.commitOffsets
+  }
+
+  def commitOffsets(topic: String, partitionOffsetMap: java.util.Map[String,java.lang.Long]) {
+    import scala.collection.JavaConversions._
+    val scalaPartitionOffsetMap: Map[String, Long] =
+      Map.empty[String, Long] ++ asMap(partitionOffsetMap.asInstanceOf[java.util.Map[String, Long]])
+    underlying.commitOffsets(topic, scalaPartitionOffsetMap)
   }
 
   def shutdown() {

@@ -35,9 +35,9 @@ public interface ConsumerConnector {
    *          The number of items in the list is #streams. Each stream supports
    *          an iterator over message/metadata pairs.
    */
-  public <K,V> Map<String, List<KafkaStream<K,V>>> 
+  public <K,V> Map<String, List<KafkaStream<K,V>>>
     createMessageStreams(Map<String, Integer> topicCountMap, Decoder<K> keyDecoder, Decoder<V> valueDecoder);
-  
+
   public Map<String, List<KafkaStream<byte[], byte[]>>> createMessageStreams(Map<String, Integer> topicCountMap);
 
   /**
@@ -51,17 +51,22 @@ public interface ConsumerConnector {
    *  @return a list of KafkaStream. Each stream supports an
    *          iterator over its MessageAndMetadata elements.
    */
-  public <K,V> List<KafkaStream<K,V>> 
+  public <K,V> List<KafkaStream<K,V>>
     createMessageStreamsByFilter(TopicFilter topicFilter, int numStreams, Decoder<K> keyDecoder, Decoder<V> valueDecoder);
-  
+
   public List<KafkaStream<byte[], byte[]>> createMessageStreamsByFilter(TopicFilter topicFilter, int numStreams);
-  
+
   public List<KafkaStream<byte[], byte[]>> createMessageStreamsByFilter(TopicFilter topicFilter);
 
   /**
    *  Commit the offsets of all broker partitions connected by this connector.
    */
   public void commitOffsets();
+
+  /**
+   *  Commit the offsets of some partitions in some topic
+   */
+  public void commitOffsets(String topic, Map<String, Long> partitionOffsetMap);
 
   /**
    *  Shut down the connector

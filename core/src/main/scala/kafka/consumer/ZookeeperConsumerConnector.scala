@@ -121,8 +121,8 @@ private[kafka] class ZookeeperConsumerConnector(val config: ConsumerConfig,
   KafkaMetricsReporter.startReporters(config.props)
 
   def this(config: ConsumerConfig) = this(config, true)
-  
-  def createMessageStreams(topicCountMap: Map[String,Int]): Map[String, List[KafkaStream[Array[Byte],Array[Byte]]]] = 
+
+  def createMessageStreams(topicCountMap: Map[String,Int]): Map[String, List[KafkaStream[Array[Byte],Array[Byte]]]] =
     createMessageStreams(topicCountMap, new DefaultDecoder(), new DefaultDecoder())
 
   def createMessageStreams[K,V](topicCountMap: Map[String,Int], keyDecoder: Decoder[K], valueDecoder: Decoder[V])
@@ -133,9 +133,9 @@ private[kafka] class ZookeeperConsumerConnector(val config: ConsumerConfig,
     consume(topicCountMap, keyDecoder, valueDecoder)
   }
 
-  def createMessageStreamsByFilter[K,V](topicFilter: TopicFilter, 
-                                        numStreams: Int, 
-                                        keyDecoder: Decoder[K] = new DefaultDecoder(), 
+  def createMessageStreamsByFilter[K,V](topicFilter: TopicFilter,
+                                        numStreams: Int,
+                                        keyDecoder: Decoder[K] = new DefaultDecoder(),
                                         valueDecoder: Decoder[V] = new DefaultDecoder()) = {
     val wildcardStreamsHandler = new WildcardStreamsHandler[K,V](topicFilter, numStreams, keyDecoder, valueDecoder)
     wildcardStreamsHandler.streams
@@ -262,7 +262,26 @@ private[kafka] class ZookeeperConsumerConnector(val config: ConsumerConfig,
     }
   }
 
+  def commitOffsets(topic: String, partitionOffsetMap: scala.collection.Map[String, Long]) {
+    if (zkClient == null) {
+      error("zk client is null. Cannot commit offsets")
+      return
+    }
 
+    val topicDirs = new ZKGroupTopicDirs(config.groupId, topic)
+    for ((partition, offset) <- partitionOffsetMap) {
+      try {
+        updatePersistentPath(zkClient, topicDirs.consumerOffsetDir + "/" + partition,
+          offset.toString)
+      }
+      catch {
+        case t: Throwable =>
+          // log it and let it go
+          warn("exception during commitOffsets",  t)
+      }
+      debug("Committed offset " + offset + " for partition " + partition)
+    }
+  }
 
   class ZKSessionExpireListener(val dirs: ZKGroupDirs,
                                  val consumerIdString: String,
@@ -691,10 +710,10 @@ private[kafka] class ZookeeperConsumerConnector(val config: ConsumerConfig,
     private val wildcardQueuesAndStreams = (1 to numStreams)
       .map(e => {
         val queue = new LinkedBlockingQueue[FetchedDataChunk](config.queuedMaxMessages)
-        val stream = new KafkaStream[K,V](queue, 
-                                          config.consumerTimeoutMs, 
-                                          keyDecoder, 
-                                          valueDecoder, 
+        val stream = new KafkaStream[K,V](queue,
+                                          config.consumerTimeoutMs,
+                                          keyDecoder,
+                                          valueDecoder,
                                           config.clientId)
         (queue, stream)
     }).toList
